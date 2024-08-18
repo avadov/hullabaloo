@@ -29,52 +29,52 @@ class Server:
         self.external_ip = await get_external_ip()
         
     async def handle_connection(self, reader: StreamReader,
-                                writer: StreamWriter)
-    while True:
-        try:
-            # Wait forever on new data to arrive
-            data = await reader.readuntil(b"\n")
-            
-            decoded_data = data.decode("utf-8").strip()
-            
+                                writer: StreamWriter):
+        while True:
             try:
-                message = BaseSchema().loads(decoded_data)
-            except MarshmallowError:
-                logger.info("Received unreadable message",
-                            peer=writer)
+                # Wait forever on new data to arrive
+                data = await reader.readuntil(b"\n")
+                
+                decoded_data = data.decode("utf-8").strip()
+                
+                try:
+                    message = BaseSchema().loads(decoded_data)
+                except MarshmallowError:
+                    logger.info("Received unreadable message",
+                                peer=writer)
+                    break
+                
+                # Extract the address from the message, add it to 
+                # the writer object
+                writer.address = message["meta"]["address"]
+                
+                # Adding the peer to our connection pool 
+                self.connection_pool.add_peer(writer)
+                
+                # Handle the message
+                await self.p2p_protocol.handle_message(message, writer)
+                
+                await writer.drain()
+                if writer.is_closing():
+                    break
+                
+            except (asyncio.exceptions.IncompleteReadError,
+                    ConnectionError):
+                # Break out of the wait loop
                 break
             
-            # Extract the address from the message, add it to 
-            # the writer object
-            writer.address = message["meta"]["address"]
-            
-            # Adding the peer to our connection pool 
-            self.connection_pool.add_peer(writer)
-            
-            # Handle the message
-            await self.p2p_protocol.handle_message(message, writer)
-            
-            await writer.drain()
-            if writer.is_closing():
-                break
-            
-        except (asyncio.exceptions.IncompleteReadError,
-                ConnectionError):
-            # Break out of the wait loop
-            break
+        # The connection has closed. Cleaning up
+        writer.close()
+        await writer.wait_closed()
+        self.connection_pool.remove_peer(writer)
         
-    # The connection has closed. Cleaning up
-    writer.close()
-    await writer.wait_closed()
-    self.connection_pool.remove_peer(writer)
-    
-async def listen(self, hostname="0.0.0.0", port=8888):
-    server = await asyncio.start_server(self.handle_connection,
-                                        hostname, port)
-    logger.info(f"Server listening on {hostname}:{port}")
-    
-    self.external_ip = await self.get_external_ip()
-    self.external_port = 8888
-    
-    async with server:
-        await server.serve_forever()
+    async def listen(self, hostname="0.0.0.0", port=8888):
+        server = await asyncio.start_server(self.handle_connection,
+                                            hostname, port)
+        logger.info(f"Server listening on {hostname}:{port}")
+        
+        self.external_ip = await self.get_external_ip()
+        self.external_port = 8888
+        
+        async with server:
+            await server.serve_forever()

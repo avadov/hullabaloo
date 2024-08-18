@@ -1,7 +1,7 @@
 import asyncio
 
 from hullabaloo.blockchain import Blockchain
-from hullabaloo.pool import ConnectionPool
+from hullabaloo.connections import ConnectionPool
 from hullabaloo.peers import P2PProtocol
 from hullabaloo.server import Server
 

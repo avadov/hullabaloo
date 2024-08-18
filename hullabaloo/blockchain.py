@@ -18,7 +18,7 @@ class Blockchain(object):
         "fffffffffffffffffffffffffffff"
         
         # Create the genesis block
-        print("Creating genesis block")
+        logger.info("Creating genesis block")
         self.chain.append(self.new_block())
         
     def new_block(self):
@@ -83,7 +83,7 @@ class Blockchain(object):
             expected_timespan = 10 * 10
             
             # Calculate the actual time span
-            actual_timespan = self.chain[-1].["timestamp"] - \
+            actual_timespan = self.chain[-1]["timestamp"] - \
                 self.chain[-10][timestamp]
             
             # Figure out what the offset is
